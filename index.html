@@ -26,11 +26,11 @@
 <input type="number" id="slaInput" min="1" value="48" oninput="updateCounter()">
 <div id="counter"></div>
 
-<img src="img1.jpg" alt="imagem">
+<img src="img1.jpg" alt="sla">
 
 <script>
-  const startHour = 6;
-  const endHour = 20;
+  const startHour = 7;
+  const endHour = 19;
 
   // Função para verificar se a data é um dia útil (segunda a sexta-feira)
   function isWeekday(date) {
@@ -38,59 +38,43 @@
     return dayOfWeek !== 0 && dayOfWeek !== 6; // 0 = Sunday, 6 = Saturday
   }
 
-  function updateCounter() {
-    const slaHours = parseInt(document.getElementById('slaInput').value);
+  // Função para calcular a data e hora estimadas de conclusão do SLA
+  function calculateCompletionDate(slaHours) {
     const now = new Date();
     let completionDate = new Date(now);
 
-    // Verifica se está no horário comercial
-    if (now.getHours() >= startHour && now.getHours() < endHour && isWeekday(now)) {
-      const remainingHours = endHour - now.getHours();
-      if (slaHours <= remainingHours) {
-        completionDate.setHours(completionDate.getHours() + slaHours);
-      } else {
-        let remainingDays = Math.ceil((slaHours - remainingHours) / (endHour - startHour));
-        let additionalHours = (slaHours - remainingHours) % (endHour - startHour);
+    // Adiciona horas úteis
+    while (slaHours > 0) {
+      completionDate.setHours(completionDate.getHours() + 1);
 
-        // Adiciona dias úteis necessários
-        while (remainingDays > 0 || additionalHours > 0) {
-          completionDate.setDate(completionDate.getDate() + 1);
-          if (isWeekday(completionDate)) {
-            remainingDays--;
-            if (remainingDays <= 0) {
-              completionDate.setHours(startHour + additionalHours);
-              break;
-            }
-          }
-        }
-      }
-    } else {
-      // Ajusta para o início do próximo dia útil
-      completionDate.setHours(startHour);
-      completionDate.setMinutes(0);
-      completionDate.setSeconds(0);
-      completionDate.setMilliseconds(0);
-
-      let remainingDays = Math.ceil(slaHours / (endHour - startHour));
-      let additionalHours = slaHours % (endHour - startHour);
-
-      // Adiciona dias úteis necessários
-      while (remainingDays > 0 || additionalHours > 0) {
-        completionDate.setDate(completionDate.getDate() + 1);
-        if (isWeekday(completionDate)) {
-          remainingDays--;
-          if (remainingDays <= 0) {
-            completionDate.setHours(startHour + additionalHours);
-            break;
-          }
-        }
+      if (isWeekday(completionDate) && completionDate.getHours() >= startHour && completionDate.getHours() < endHour) {
+        slaHours--;
       }
     }
 
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric', timeZoneName: 'short' };
-    const formattedDate = completionDate.toLocaleDateString('pt-BR', options);
+    // Se a conclusão cair em um final de semana ou fora do horário comercial, ajusta para o próximo dia útil dentro do intervalo de horário comercial
+    while (!isWeekday(completionDate) || completionDate.getHours() < startHour || completionDate.getHours() >= endHour) {
+      completionDate.setDate(completionDate.getDate() + 1);
+      completionDate.setHours(startHour);
+    }
 
-    document.getElementById('counter').innerHTML = `Data e hora estimadas de conclusão: ${formattedDate}`;
+    return completionDate;
+  }
+
+  // Função para atualizar o contador com a data e hora estimadas de conclusão do SLA
+  function updateCounter() {
+    const slaHours = parseInt(document.getElementById('slaInput').value);
+    
+    if (!isNaN(slaHours) && slaHours > 0) {
+      const completionDate = calculateCompletionDate(slaHours);
+
+      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric', timeZoneName: 'short' };
+      const formattedDate = completionDate.toLocaleDateString('pt-BR', options);
+
+      document.getElementById('counter').innerHTML = `Data e hora estimadas de conclusão: ${formattedDate}`;
+    } else {
+      document.getElementById('counter').innerHTML = 'Por favor, insira um número válido de horas para o SLA.';
+    }
   }
 
   // Chama a função inicialmente para exibir o contador ao carregar a página
@@ -99,4 +83,3 @@
 
 </body>
 </html>
-
